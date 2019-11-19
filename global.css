@@ -1,0 +1,28 @@
+body {
+  background-color: #ffffff;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+tr:nth-child(odd) {
+  background-color: #eeeeee;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+
+thead tr:nth-child(odd) {
+  background-color: #999999;
+}
+
+thead tr:nth-child(even) {
+  background-color: #999999;
+}
+
+td {
+    padding-left: 1em;
+    padding-right: 1em;
+}
