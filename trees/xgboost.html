@@ -162,6 +162,7 @@
       .y(function(d) { return yScale(d.y) })
       );
     </script>
+    <h3>Tree 0</h3>
     <p>XGBoost sorts the features and searches for the split with the most gain, where
     $$\text{Gain} = \frac{(\sum_{i \in I_L} g_i)^2}{\sum_{i \in I_L} h_i + \lambda} + \frac{(\sum_{i \in I_R} g_i)^2}{\sum_{i \in I_R} h_i + \lambda} - \frac{(\sum_{i \in I_L \cup I_R} g_i)^2}{\sum_{i \in I_L \cup I_R} h_i + \lambda}.$$
     The split with the most gain is to separate A from B and C.</p>
@@ -226,6 +227,60 @@
     and
     $$w_R = -\eta \frac{G_R}{H_R + \lambda} = -0.5 \frac{-2}{2 + 1} = 0.333.$$</p>
     <div id="mse_tree0"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var svg = d3.select("#mse_tree0")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      /*var data = {"name": "Father",
+      "children": [{"name": "Son",
+      "children": [{"name": "Grandson"},
+      {"name": "Granddaughter"}]}]};*/
+      var data = {"name": "f0 < 0.5",
+      "children": [{"name": "A",
+      "type": "yes"},
+      {"name": "BC",
+      "type": "no"}]};
+      
+      var treemap = d3.tree().size([width, height]);
+      var nodes = d3.hierarchy(data);
+      nodes = treemap(nodes);
+      var links = nodes.descendants().slice(1);
+
+      // Nodes
+      var node = svg.selectAll(".node")
+      .data(nodes.descendants())
+      .enter().append("g")
+      node.append("circle")
+      .attr("class", "node")
+      .attr("r", 4.5)
+      .attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; });
+      node.append("text")
+      .text(function(d){return d.data.name;})
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; });
+
+      // Links
+      svg.selectAll(".link")
+      .data(links)
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", function(d) {
+      return "M" + d.x + "," + d.y
+      + "C" + d.x + "," + (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," +  (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," + d.parent.y;
+      });
+    </script>
     <p>The gain for splitting B and C is -0.0833. This means a split would make the objective function worse, so the initial tree is complete. To get the prediction, we must add it to the starting prediction of 0.5. So below 0.5, we prediction 0.5 - 0.125 = 0.375 and above it, we predict 0.833.</p>
     <div id="mse_tree0_pred"></div>
     <script>
@@ -279,6 +334,230 @@
       .y(function(d) { return yScale(d.y) })
       );
     </script>
+    <h3>Tree 1</h3>
+    <p>The split with the most gain separates A and B from C. The gain is 0.465, while splitting A from B and C is 0.433. The algorithm proceeds by splitting A from B with a gain of 0.0697.</p>
+    <div id="mse_tree1"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var svg = d3.select("#mse_tree1")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var data = {
+        "name": "f0 < 1.5",
+        "children": [
+          {"name": "f0 < 0.5",
+           "type": "yes",
+           "children": [
+             {"name": "A",
+              "type": "yes"},
+             {"name": "B",
+              "type": "no"}]},
+          {"name": "C",
+           "type": "no"}]};
+      
+      var treemap = d3.tree().size([width, height]);
+      var nodes = d3.hierarchy(data);
+      nodes = treemap(nodes);
+      var links = nodes.descendants().slice(1);
+
+      // Nodes
+      var node = svg.selectAll(".node")
+      .data(nodes.descendants())
+      .enter().append("g")
+      node.append("circle")
+      .attr("class", "node")
+      .attr("r", 4.5)
+      .attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; });
+      node.append("text")
+      .text(function(d){return d.data.name;})
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; });
+
+      // Links
+      svg.selectAll(".link")
+      .data(links)
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", function(d) {
+      return "M" + d.x + "," + d.y
+      + "C" + d.x + "," + (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," +  (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," + d.parent.y;
+      });
+    </script>
+    <div id="mse_tree1_pred"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var xScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([0, width]);
+      var yScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([height, 0]);
+
+      var dataset = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+      var pred = [{"x": -1, "y": 0.28125}, {"x": 0.5, "y": 0.28125}, {"x": 0.5, "y": 0.875}, {"x": 1.5, "y": 0.875}, {"x": 1.5, "y": 1.125}, {"x": 3, "y": 1.125}]
+
+      var svg = d3.select("#mse_tree1_pred")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // Add axes
+      svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale));
+      svg.append("g")
+      .attr("class", "y axis")
+      .call(d3.axisLeft(yScale));
+
+      // Training data
+      svg.selectAll(".dot")
+      .data(dataset)
+      .enter().append("circle") // Uses the enter().append() method
+      .attr("class", "dot") // Assign a class for styling
+      .attr("cx", function(d) { return xScale(d.x) })
+      .attr("cy", function(d) { return yScale(d.y) })
+      .attr("r", 5);
+
+      // Prediction
+      svg.append("path")
+      .datum(pred)
+      .attr("fill", "none")
+      .attr("stroke", "#dd3333")
+      .attr("stroke-width", 1.5)
+      .attr("d", d3.line()
+      .x(function(d) { return xScale(d.x) })
+      .y(function(d) { return yScale(d.y) })
+      );
+  </script>
+  <h3>Tree 2</h3>
+    <p>The split with the most gain separates A and B from C again. The gain is 0.262, while splitting A from B and C is 0.244. The algorithm proceeds by splitting A from B with a gain of 0.0392.</p>
+    <div id="mse_tree2"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var svg = d3.select("#mse_tree2")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var data = {
+        "name": "f0 < 1.5",
+        "children": [
+          {"name": "f0 < 0.5",
+           "type": "yes",
+           "children": [
+             {"name": "A",
+              "type": "yes"},
+             {"name": "B",
+              "type": "no"}]},
+          {"name": "C",
+           "type": "no"}]};
+      
+      var treemap = d3.tree().size([width, height]);
+      var nodes = d3.hierarchy(data);
+      nodes = treemap(nodes);
+      var links = nodes.descendants().slice(1);
+
+      // Nodes
+      var node = svg.selectAll(".node")
+      .data(nodes.descendants())
+      .enter().append("g")
+      node.append("circle")
+      .attr("class", "node")
+      .attr("r", 4.5)
+      .attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; });
+      node.append("text")
+      .text(function(d){return d.data.name;})
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; });
+
+      // Links
+      svg.selectAll(".link")
+      .data(links)
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", function(d) {
+      return "M" + d.x + "," + d.y
+      + "C" + d.x + "," + (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," +  (d.y + d.parent.y) / 2
+      + " " + d.parent.x + "," + d.parent.y;
+      });
+    </script>
+    <div id="mse_tree2_pred"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var xScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([0, width]);
+      var yScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([height, 0]);
+
+      var dataset = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+      var pred = [{"x": -1, "y": 0.2109375}, {"x": 0.5, "y": 0.2109375}, {"x": 0.5, "y": 0.90625}, {"x": 1.5, "y": 0.90625}, {"x": 1.5, "y": 1.34375}, {"x": 3, "y": 1.34375}]
+
+      var svg = d3.select("#mse_tree2_pred")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // Add axes
+      svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale));
+      svg.append("g")
+      .attr("class", "y axis")
+      .call(d3.axisLeft(yScale));
+
+      // Training data
+      svg.selectAll(".dot")
+      .data(dataset)
+      .enter().append("circle") // Uses the enter().append() method
+      .attr("class", "dot") // Assign a class for styling
+      .attr("cx", function(d) { return xScale(d.x) })
+      .attr("cy", function(d) { return yScale(d.y) })
+      .attr("r", 5);
+
+      // Prediction
+      svg.append("path")
+      .datum(pred)
+      .attr("fill", "none")
+      .attr("stroke", "#dd3333")
+      .attr("stroke-width", 1.5)
+      .attr("d", d3.line()
+      .x(function(d) { return xScale(d.x) })
+      .y(function(d) { return yScale(d.y) })
+      );
+  </script>  
 </body>
 
 </html>

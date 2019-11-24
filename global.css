@@ -26,3 +26,12 @@ td {
     padding-left: 1em;
     padding-right: 1em;
 }
+
+.link {
+    fill: none;
+    stroke: #000000;
+}
+
+.node {
+    stroke: #ffffff;
+}
