@@ -6,14 +6,41 @@
   <link rel="stylesheet" href="../global.css">
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
 </head>
 
 <body>
   <div class="content-wrapper">
     <h1>XGBoost</h1>
-    <p><a href="https://xgboost.readthedocs.io/en/latest/tutorials/model.html">Introduction to boosted trees</a>.</p>
-    <h2>Example 1</h2>
-    <p>Simple data. Parameters:</p>
+    <p><a href="https://github.com/dmlc/xgboost">XGBoost</a>'s algorithm is based on boosted decision trees. Each new tree learns from the training data relative to the previous trees' predictions. For the full derivation see the <a href="http://doi.acm.org/10.1145/2939672.2939785">original paper</a>.</p>
+    <h2>Algorithm</h2>
+    <p>The training data \(\{\mathbf{x}_i\}\) consit of \(m\) features and \(n\) observations with labels \(\{y_i\}\). We build \(K\) trees based on the training data and labels. The output of tree \(k\) and observation \(\mathbf{x}_i\) is \(f_k(\mathbf{x}_i)\). The prediction from the tree ensemble
+    $$\hat{y}_i = \sum_{k=1}^K f_k(\mathbf{x}_i).$$
+    This prediction may be further transformed for some objective functions such as classification.</p>
+    <p>The prediction from the \(t\)th tree \(\hat{y}_i^{(t)} = \hat{y}_i^{(t-1)} + f_t(\mathbf{x}_i)\). The goal of the algorithm is to determine \(f_t(\mathbf{x}_i)\) to improve the prediction in terms of the objective function
+    $$\mathcal{L}^{(t)} = \sum_{i=1}^n l(y_i, \hat{y}_i^{(t)}) + \Omega(f_t).$$
+    The loss function \(l(y_i, \hat{y}_i)\) determines the effectiveness of \(\hat{y}_i\) predicting \(y_i\) and \(\Omega(f_t)\) is the regularization term. The parameter <code>objective</code> determines the loss function used as well as the transformation of \(\hat{y}_i\) to the prediction. The regularization
+    $$\Omega(f_t) = \gamma T + \frac{\lambda}{2} \sum_{j=1}^T w_j^2,$$
+    where \(\gamma\) is set by the parameter <code>gamma</code>, \(T\) is the number of leaves on the tree, \(w_j\) are the weights of the leaves, and \(\lambda\) (set by parameter <code>lambda</code>) is the L2 regularization parameter.</p>
+    <p>The objective function is approximated by the Taylor expansion
+    $$\mathcal{L}^{(t)} = \sum_{i=1}^n \left[l(y_i, \hat{y}_i^{(t - 1)}) + g_i f_t(\mathbf{x}_i) + \frac{1}{2} h_i f_t(\mathbf{x}_i)^2\right] + \Omega(f_t)$$
+    for gradient
+    $$g_i = \left.\frac{\partial l(y_i, \hat{y})}{\partial \hat{y}}\right|_{\hat{y}_i = \hat{y}_i^{(t-1)}}$$
+    and Hessian
+    $$h_i = \left.\frac{\partial^2 l(y_i, \hat{y})}{\partial \hat{y}^2}\right|_{\hat{y}_i = \hat{y}_i^{(t-1)}}.$$
+    The optimal weight of leaf \(j\)
+    $$w_j^* = -\frac{\sum_{i \in I_j} g_i}{\sum_{i \in I_j} h_i + \lambda},$$
+    where \(I_j\) is the set of observations \(\mathbf{x}_i\) in leaf \(j\). The reduction of the objective function by a given split into left and right nodes is
+    $$\frac{1}{2} \left[\frac{(\sum_{i \in I_L} g_i)^2}{\sum_{i \in I_L} h_i + \lambda} + \frac{(\sum_{i \in I_R} g_i)^2}{\sum_{i \in I_R} h_i + \lambda} - \frac{(\sum_{i \in I_L \cup I_R} g_i)^2}{\sum_{i \in I_L \cup I_R} h_i + \lambda}\right] - \gamma.$$</p>
+    <p>XGBoost builds trees in a greedy manner. It begins with an initial prediction of 0.5 by default (set by the parameter <code>base_score</code>). It chooses the split (both feature and value) that produces the maximum gain. Each node is split futher as long as the gain is positive, the Hessian of the child node is below the parameter <code>min_child_weight</code>, or the tree level <code>max_depth</code> is reached. The next tree is then built based on that and all the previous trees.</p>
+    <h2>Squared Error</h2>
+    <p>The loss function for <code>reg:squarederror</code>
+    $$l(y_i, \hat{y}_i) = \frac{1}{2}(y_i - \hat{y}_i)^2.$$
+    The gradient
+    $$g_i(y_i, \hat{y}_i) = \hat{y}_i - y_i$$
+    and Hessian
+    $$h_i(y_i, \hat{y}_i) = 1.$$</p>
+    <p>The parameters used in this example:</p>
     <table>
       <thead>
         <tr>
@@ -32,11 +59,11 @@
         </tr>
         <tr>
           <td>objective</td>
-          <td>binary:logistic</td>
+          <td>reg:squarederror</td>
         </tr>
         <tr>
           <td>eta</td>
-          <td>0.1</td>
+          <td>0.5</td>
         </tr>
         <tr>
           <td>lambda</td>
@@ -52,7 +79,7 @@
         </tr>
       </tbody>
     </table>
-    <p>Data:</p>
+    <p>The training data for the example:</p>
     <table>
       <thead>
         <tr>
@@ -75,95 +102,183 @@
           <td>1</td>
           <td>1</td>
         </tr>
+        <tr>
+          <td>C</td>
+          <td>2</td>
+          <td>2</td>
+        </tr>
       </tbody>
     </table>
-    <p>The loss function for binary:logistic is
-      $$L = \sum_i [y_i \log p_i + (1 - y_i) \log (1 - p_i)],$$
-      where \(i\) runs over the observations in the data, \(y_i\) is the class of the observation, and \(p_i\) is the predicted probability. For binary:logistic, the probability
-      $$p_i = \frac{1}{1 + \exp(-\hat{y}_i)},$$
-      where \(\hat{y}_i\) is the prediction from the leaves of the trees.</p>
-    <p>The gradient of the loss function
-      $$\frac{\partial L}{\partial \hat{y}_i} = y_i - p_i.$$
-      The diagonal of the Hessian
-      $$\frac{\partial^2 L}{\partial \hat{y}_i^2} = -p_i (1 - p_i).$$
-      XGBoost uses the sum over a node of the gradient and Hessian diagonal. If \(I_j\) is the set of data in leaf \(j\),
-      $$G_j = \sum_{i \in I_j} (y_i - p_i)$$
-      and
-      $$H_j = -\sum_{i \in I_j} p_i (1 - p_i).$$</p>
-    <p>XGBoost will first search for where to split the data in the feature <code>f0</code>. The split with divide the previous node into a left and right portion. XGBoost will attempt to maximize the gain
-      $$\text{Gain} = \frac{G_L^2}{\lambda - H_L} + \frac{G_R^2}{\lambda - H_R} - \frac{(G_L + G_R)^2}{\lambda - H_L - H_R},$$
-      where \(\lambda\) is the regularization parameters <code>lambda</code>. By default, the starting probability for each class is 0.5. If the split point is greater than 1, both observations are split to the left; if the split is between 0 and 1, one observation is put in each node; and if the split point is less than 0, two observations are put on the right. The gains in the table below show that the best split is in the middle: 0.5.</p>
+    <p>Unless otherwise specified by the parameter <code>base_score</code>, the prediction begins at 0.5.</p>
+    <div id="mse_initial_pred"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
+
+      var xScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([0, width]);
+      var yScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([height, 0]);
+
+      var dataset = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+      var pred = [{"x": -1, "y": 0.5}, {"x": 3, "y": 0.5}]
+
+      var svg = d3.select("#mse_initial_pred")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // Add axes
+      svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale));
+      svg.append("g")
+      .attr("class", "y axis")
+      .call(d3.axisLeft(yScale));
+
+      // Training data
+      svg.selectAll(".dot")
+      .data(dataset)
+      .enter().append("circle") // Uses the enter().append() method
+      .attr("class", "dot") // Assign a class for styling
+      .attr("cx", function(d) { return xScale(d.x) })
+      .attr("cy", function(d) { return yScale(d.y) })
+      .attr("r", 5);
+
+      // Prediction
+      svg.append("path")
+      .datum(pred)
+      .attr("fill", "none")
+      .attr("stroke", "#dd3333")
+      .attr("stroke-width", 1.5)
+      .attr("d", d3.line()
+      .x(function(d) { return xScale(d.x) })
+      .y(function(d) { return yScale(d.y) })
+      );
+    </script>
+    <p>XGBoost sorts the features and searches for the split with the most gain, where
+    $$\text{Gain} = \frac{(\sum_{i \in I_L} g_i)^2}{\sum_{i \in I_L} h_i + \lambda} + \frac{(\sum_{i \in I_R} g_i)^2}{\sum_{i \in I_R} h_i + \lambda} - \frac{(\sum_{i \in I_L \cup I_R} g_i)^2}{\sum_{i \in I_L \cup I_R} h_i + \lambda}.$$
+    The split with the most gain is to separate A from B and C.</p>
     <table>
       <thead>
         <tr>
-          <td>Split</td>
-          <td><code>f0</code> &lt; 0</td>
-          <td><code>f0</code> &lt; 0.5</td>
-          <td><code>f0</code> &lt; 1.1</td>
+          <td>Condition</td>
+          <td>Left</td>
+          <td>Right</td>
+          <td>Grad Left</td>
+          <td>Grad Right</td>
+          <td>Hessian Left</td>
+          <td>Hessian Right</td>
+          <td>Gain</td>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>\(G_L\)</td>
+          <td>f0 &lt; 0</td>
+          <td>&nbsp;</td>  
+          <td>ABC</td>
           <td>0</td>
-          <td>0.5</td>
+          <td>0.5 - 0.5 - 1.5 = -1.5</td>
           <td>0</td>
-        </tr>
-        <tr>
-          <td>\(G_R\)</td>
-          <td>0</td>
-          <td>-0.5</td>
+          <td>1 + 1 + 1 = 3</td>
           <td>0</td>
         </tr>
         <tr>
-          <td>\(H_L\)</td>
-          <td>0.5</td>
-          <td>0.25</td>
-          <td>0.5</td>
+          <td>f0 &lt; 0.5</td>
+          <td>A</td>
+          <td>BC</td>
+          <td>0.5 = 0.5</td>
+          <td>-0.5 - 1.5 = -2</td>
+          <td>1 = 1</td>
+          <td>1 + 1 = 2</td>
+          <td>0.896</td>
         </tr>
         <tr>
-          <td>\(H_R\)</td>
-          <td>0.5</td>
-          <td>0.25</td>
-          <td>0.5</td>
+          <td>f0 &lt; 1.5</td>
+          <td>AB</td>
+          <td>C</td>
+          <td>0.5 - 0.5 = 0</td>
+          <td>-1.5 = -1.5</td>
+          <td>1 + 1 = 2</td>
+          <td>1 = 1</td>
+          <td>0.563</td>
         </tr>
         <tr>
-          <td>Gain</td>
+          <td>f0 &lt; 2.5</td>
+          <td>ABC</td>
+          <td>&nbsp;</td>
+          <td>0.5 - 0.5 - 1.5 = -1.5</td>
           <td>0</td>
-          <td>0.4</td>
+          <td>1 + 1 + 1 = 3</td>
+          <td>0</td>
           <td>0</td>
         </tr>
       </tbody>
     </table>
-    <p>Whether or not the node is split depends on other parameters. The gain must be at least as large as <code>gamma</code>. Each child node's \(H\) must be at least as large as <code>min_child_weight</code>.</p>
-    <p>The weight for a leaf with learning rate \(\eta\) is
-      $$w_j = -\eta \frac{G_j}{\lambda - H_j}.$$</p>
-    <h3>Tree 0</h3>
-    <svg width="220" height="300">
-        <rect x="60" y="0" width="100" height="40" fill="#999999"></rect>
-        <text x="60" y="40">f0 &lt; 0.5</text>
-        <line x1="110" y1="40" x2="50" y2="80" style="stroke:#999999;stroke-width:2"></line>
-        <text x="40" y="65">yes</text>
-        <line x1="110" y1="40" x2="170" y2="80" style="stroke:#999999;stroke-width:2"></line>
-        <text x="160" y="65">no</text>
-        <rect x="0" y="80" width="100" height="40" fill="#999999"></rect>
-        <text x="0" y="100">-0.04</text>
-        <text x="0" y="120">A</text>
-        <rect x="120" y="80" width="100" height="40" fill="#999999"></rect>
-        <text x="120" y="100">0.04</text>
-        <text x="120" y="120">B</text>
-    </svg>
+    <p>The weights are
+    $$w_L = -\eta \frac{G_L}{H_L + \lambda} = -0.5 \frac{0.5}{1 + 1} = -0.125$$
+    and
+    $$w_R = -\eta \frac{G_R}{H_R + \lambda} = -0.5 \frac{-2}{2 + 1} = 0.333.$$</p>
+    <div id="mse_tree0"></div>
+    <p>The gain for splitting B and C is -0.0833. This means a split would make the objective function worse, so the initial tree is complete. To get the prediction, we must add it to the starting prediction of 0.5. So below 0.5, we prediction 0.5 - 0.125 = 0.375 and above it, we predict 0.833.</p>
+    <div id="mse_tree0_pred"></div>
+    <script>
+      var margin = {top: 50, right: 50, bottom: 50, left: 50}
+      , width = 400 - margin.left - margin.right // Use the window's width 
+      , height = 300 - margin.top - margin.bottom; // Use the window's height
 
-    <!--<p>The gradient of the loss function
-      $$p_i = \frac{\mathrm{e}^{\hat{y}_i}}{\sum_j \mathrm{e}^{\hat{y}_j}}$$
-      $$\frac{\partial p_i}{\partial \hat{y}_i} = \frac{\mathrm{e}^{\hat{y}_i}}{\sum_j \mathrm{e}^{\hat{y}_j}} - \left(\frac{\mathrm{e}^{\hat{y}_i}}{\sum_j \mathrm{e}^{\hat{y}_j}}\right)^2 = p_i (1 - p_i)$$
-      $$\frac{\partial p_i}{\partial \hat{y}_k} = -\frac{\mathrm{e}^{\hat{y}_i} \mathrm{e}^{\hat{y}_k}}{(\sum_j \mathrm{e}^{\hat{y}_j})^2} = -p_i p_k, i \neq k$$
-      $$L = \sum_i y_i \log p_i$$
-      $$\frac{\partial L}{\partial \hat{y}_i} = y_i - p_i.$$
-      The diagonal of the Hessian
-      $$\frac{\partial^2 L}{\partial \hat{y}_i^2} = -p_i (1 - p_i).$$</p>
-  <p>$$\frac{e^{y_0}}{e^{y_0} + e^{y_1} + e^{y_2}}$$</p>-->
-  </div>
+      var xScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([0, width]);
+      var yScale = d3.scaleLinear()
+      .domain([-1, 3])
+      .range([height, 0]);
+
+      var dataset = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+      var pred = [{"x": -1, "y": 0.375}, {"x": 0.5, "y": 0.375}, {"x": 0.5, "y": 0.8333333}, {"x": 3, "y": 0.8333333}]
+
+      var svg = d3.select("#mse_tree0_pred")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // Add axes
+      svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale));
+      svg.append("g")
+      .attr("class", "y axis")
+      .call(d3.axisLeft(yScale));
+
+      // Training data
+      svg.selectAll(".dot")
+      .data(dataset)
+      .enter().append("circle") // Uses the enter().append() method
+      .attr("class", "dot") // Assign a class for styling
+      .attr("cx", function(d) { return xScale(d.x) })
+      .attr("cy", function(d) { return yScale(d.y) })
+      .attr("r", 5);
+
+      // Prediction
+      svg.append("path")
+      .datum(pred)
+      .attr("fill", "none")
+      .attr("stroke", "#dd3333")
+      .attr("stroke-width", 1.5)
+      .attr("d", d3.line()
+      .x(function(d) { return xScale(d.x) })
+      .y(function(d) { return yScale(d.y) })
+      );
+    </script>
 </body>
 
 </html>
