@@ -14,11 +14,29 @@
       , width = 400 - margin.left - margin.right
       , height = 300 - margin.top - margin.bottom;
 
+      var min_x = 100;
+      var max_x = 0;
+      var min_y = 100;
+      var max_y = 0;
+      for (i = 0; i < data.length; ++i) {
+        if (data[i].x < min_x) {
+          min_x = data[i].x
+        }
+        if (data[i].x > max_x) {
+          max_x = data[i].x
+        }
+        if (data[i].y < min_y) {
+          min_y = data[i].y
+        }
+        if (data[i].y > max_y) {
+          max_y = data[i].y
+        }
+      }
       var xScale = d3.scaleLinear()
-      .domain([-1, 3])
+      .domain([min_x - 1, max_x + 1])
       .range([0, width]);
       var yScale = d3.scaleLinear()
-      .domain([-1, 3])
+      .domain([min_y - 1, max_y + 1])
       .range([height, 0]);
 
       var svg = d3.select(id)
@@ -54,15 +72,19 @@
       .attr("dy", -10);
 
       // Prediction
-      svg.append("path")
-      .datum(pred)
-      .attr("fill", "none")
-      .attr("stroke", "#dd3333")
-      .attr("stroke-width", 1.5)
-      .attr("d", d3.line()
-      .x(function(d) { return xScale(d.x) })
-      .y(function(d) { return yScale(d.y) })
-      );
+      var colors = ["#dd3333", "#33dd33", "#3333dd"];
+      for (i = 0; i < pred.length; ++i) {
+        console.log(pred[i])
+        svg.append("path")
+        .datum(pred[i])
+        .attr("fill", "none")
+        .attr("stroke", colors[i])
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+        .x(function(d) { return xScale(d.x) })
+        .y(function(d) { return yScale(d.y) })
+        );
+      }
     }
 
     // Tree plot
@@ -261,7 +283,7 @@
       var data_mse = [{"ID": "A", "x": 0, "y": 0},
                       {"ID": "B", "x": 1, "y": 1},
                       {"ID": "C", "x": 2, "y": 2}]
-      var pred = [{"x": -1, "y": 0.5}, {"x": 3, "y": 0.5}]
+      var pred = [[{"x": -1, "y": 0.5}, {"x": 3, "y": 0.5}]]
       pred_plot("#mse_initial_pred", data_mse, pred)
     </script>
     <h3>Tree 0</h3>
@@ -284,7 +306,7 @@
       <tbody>
         <tr>
           <td>f0 &lt; 0</td>
-          <td>&nbsp;</td>  
+          <td>&nbsp;</td>
           <td>ABC</td>
           <td>0</td>
           <td>0.5 - 0.5 - 1.5 = -1.5</td>
@@ -335,10 +357,9 @@
         "leaf": false,
         "observations": ["A", "B", "C"],
         "gain": 0.895833373,
-        "cover": 3,          
+        "cover": 3,
         "children": [
           {"leaf": true,
-           "name": "A",
            "direction": "yes",
            "observations": ["A"],
            "gradient": 0.5,
@@ -346,7 +367,6 @@
            "weight": -0.125,
            "cover":1},
           {"leaf": true,
-           "name": "BC",
            "direction": "no",
            "observations": ["B", "C"],
            "gradient": -2,
@@ -358,7 +378,7 @@
     <p>The gain for splitting B and C is -0.0833. This means a split would make the objective function worse, so the initial tree is complete. To get the prediction, we must add it to the starting prediction of 0.5. So below 0.5, we prediction 0.5 - 0.125 = 0.375 and above it, we predict 0.833.</p>
     <div id="mse_tree0_pred"></div>
     <script>
-      var pred = [{"x": -1, "y": 0.375}, {"x": 0.5, "y": 0.375}, {"x": 0.5, "y": 0.8333333}, {"x": 3, "y": 0.8333333}]
+      var pred = [[{"x": -1, "y": 0.375}, {"x": 0.5, "y": 0.375}, {"x": 0.5, "y": 0.8333333}, {"x": 3, "y": 0.8333333}]]
       pred_plot("#mse_tree0_pred", data_mse, pred)
     </script>
     <h3>Tree 1</h3>
@@ -382,7 +402,6 @@
            "cover": 2,
            "children": [
              {"leaf": true,
-              "name": "A",
               "direction": "yes",
               "observations": ["A"],
               "gradient": 0.375,
@@ -390,7 +409,6 @@
               "weight": -0.09375,
               "cover": 1},
              {"leaf": true,
-              "name": "B",
               "direction": "no",
               "observations": ["B"],
               "gradient": -0.166666667,
@@ -398,7 +416,6 @@
               "weight": 0.0416666567,
               "cover": 1}]},
           {"leaf": true,
-           "name": "C",
            "direction": "no",
            "observations": ["C"],
            "gradient": -1.166666667,
@@ -409,7 +426,7 @@
     </script>
     <div id="mse_tree1_pred"></div>
     <script>
-      var pred = [{"x": -1, "y": 0.28125}, {"x": 0.5, "y": 0.28125}, {"x": 0.5, "y": 0.875}, {"x": 1.5, "y": 0.875}, {"x": 1.5, "y": 1.125}, {"x": 3, "y": 1.125}]
+      var pred = [[{"x": -1, "y": 0.28125}, {"x": 0.5, "y": 0.28125}, {"x": 0.5, "y": 0.875}, {"x": 1.5, "y": 0.875}, {"x": 1.5, "y": 1.125}, {"x": 3, "y": 1.125}]]
       pred_plot("#mse_tree1_pred", data_mse, pred)
     </script>
     <h3>Tree 2</h3>
@@ -419,7 +436,7 @@
       var data = {
         "leaf": false,
         "condition": "f0 < 1.5",
-        "observations": ["A", "B"],
+        "observations": ["A", "B", "C"],
         "gain": 0.26180014,
         "cover": 3,
         "children": [
@@ -433,7 +450,6 @@
            "cover": 2,
            "children": [
              {"leaf": true,
-              "name": "A",
               "observations": ["A"],
               "direction": "yes",
               "gradient": 0.28125,
@@ -441,7 +457,6 @@
               "weight": -0.0703125,
               "cover": 1},
              {"leaf": true,
-              "name": "B",
               "observations": ["B"],
               "direction": "no",
               "gradient": -0.125,
@@ -449,7 +464,6 @@
               "weight": 0.03125,
               "cover": 1}]},
           {"leaf": true,
-           "name": "C",
            "observations": ["C"],
            "direction": "no",
            "gradient": -0.875,
@@ -460,8 +474,214 @@
     </script>
     <div id="mse_tree2_pred"></div>
     <script>
-      var pred = [{"x": -1, "y": 0.2109375}, {"x": 0.5, "y": 0.2109375}, {"x": 0.5, "y": 0.90625}, {"x": 1.5, "y": 0.90625}, {"x": 1.5, "y": 1.34375}, {"x": 3, "y": 1.34375}]
+      var pred = [[{"x": -1, "y": 0.2109375}, {"x": 0.5, "y": 0.2109375}, {"x": 0.5, "y": 0.90625}, {"x": 1.5, "y": 0.90625}, {"x": 1.5, "y": 1.34375}, {"x": 3, "y": 1.34375}]]
       pred_plot("#mse_tree2_pred", data_mse, pred)
+    </script>
+    <h2>Multiclass classification</h2>
+    <p>The loss function for <code>multi:softprob</code> with \(J\) classes
+    $$l(\mathbf{y}_i, \hat{\mathbf{y}}_i) = \sum_{j = 1}^J y_{ij} \log p_{ij}(\hat{\mathbf{y}}_i).$$
+    The prediction from the trees \(\hat{y}_{ij}\) are transformed using the softmax function into the probabilities
+    $$p_{ij} = \frac{\mathrm{e}^{\hat{y}_{ij}}}{\sum_{k = 1}^J \mathrm{e}^{\hat{y}_{ik}}}.$$
+    The gradient
+    $$g_{ik}(\mathbf{y}_i, \hat{\mathbf{y}}_i) = \sum_{j=1}^J y_{ij} (p_{ik} - \delta_{jk}) = p_{ik} - \delta_{jk}.$$
+    XGBoost uses the the Hessian times a factor of 2 in its calculations:
+    $$h_{ik}(\mathbf{y}_i, \hat{\mathbf{y}}_i) = \sum_{j=1}^J 2 y_{ij} p_{ik} (1 - p_{ik}) = 2 y_{ij} p_{ik} (1 - p_{ik}).$$</p>
+    <p>The parameters used in this example:</p>
+    <table>
+      <thead>
+        <tr>
+          <td>Parameter</td>
+          <td>Value</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>max_depth</td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td>num_boost_round</td>
+          <td>3</td>
+        </tr>
+        <tr>
+          <td>objective</td>
+          <td>multi:softprob</td>
+        </tr>
+        <tr>
+          <td>eta</td>
+          <td>0.5</td>
+        </tr>
+        <tr>
+          <td>lambda</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>gamma</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>min_child_weight</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>num_class</td>
+          <td>3</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The training data for the example:</p>
+    <table>
+      <thead>
+        <tr>
+          <td rowspan="2">ID</td>
+          <td>X</td>
+          <td colspan="4">y</td>
+        </tr>
+        <tr>
+          <td>f0</td>
+          <td>class</td>
+          <td>\(y_0\)</td>
+          <td>\(y_1\)</td>
+          <td>\(y_2\)</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A</td>
+          <td>0</td>
+          <td>0</td>
+          <td>1</td>
+          <td>0</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>B</td>
+          <td>1</td>
+          <td>1</td>
+          <td>0</td>
+          <td>1</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>C</td>
+          <td>2</td>
+          <td>2</td>
+          <td>0</td>
+          <td>0</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Unless otherwise specified by the parameter <code>base_score</code>, the prediction begins at \(1/J\) or \(\hat{y}_{ij} = 0\).</p>
+    <div id="multi_initial_pred"></div>
+    <script>
+      var data_multi = [{"ID": "A", "x": 0, "y": 1},
+                        {"ID": "B", "x": 1, "y": 1},
+                        {"ID": "C", "x": 2, "y": 1}]
+      var pred = [[{"x": -1, "y": 0.333333}, {"x": 3, "y": 0.333333}], [{"x": -1, "y": 0.333333}, {"x": 3, "y": 0.333333}], [{"x": -1, "y": 0.333333}, {"x": 3, "y": 0.333333}]]
+      pred_plot("#multi_initial_pred", data_multi, pred)
+    </script>
+    <p>For multiclass prediction, XGBoost begins by building a tree to predict the 0th class, the next tree is built the predict the 1st class, etc. After \(J\) classes, the cycle repeats. Therefore, the number of trees produced will be the number of classes times the number of boosting rounds. The probabilities for the classes are updated after a full boosting round.</p>
+    <h3>Trees 0, 1, 2</h3>
+    <div id="multi_tree0"></div>
+    <script>
+      var data = {
+        "leaf": false,
+        "condition": "f0 < 0.5",
+        "observations": ["A", "B", "C"],
+        "gain": 0.542986393,
+        "cover": 1.33333325,
+        "children": [
+          {"leaf": true,
+           "observations": ["A"],
+           "direction": "yes",
+           "gradient": -0.666666667,
+           "Hessian": 0.444444444,
+           "weight": 0.230769217,
+           "cover": 0.444444418},
+          {"leaf": true,
+           "observations": ["B", "C"],
+           "direction": "no",
+           "gradient": 0.666666667,
+           "Hessian": 0.888888889,
+           "weight": -0.176470593,
+           "cover": 0.888888836}]};
+      tree_plot("#multi_tree0", data);
+    </script>
+    <div id="multi_tree1"></div>
+    <script>
+      var data = {
+        "leaf": false,
+        "condition": "f0 < 1.5",
+        "observations": ["A", "B", "C"],
+        "gain": 0.135746598,
+        "cover": 1.33333325,
+        "children": [
+          {"leaf": false,
+           "condition": "f0 < 0.5",
+           "observations": ["A", "B"],
+           "gain": 0.325791836,
+           "cover": 0.888888836,
+           "children": [
+             {"leaf": true,
+              "observations": ["A"],
+              "direction": "yes",
+              "gradient": 0.333333333,
+              "Hessian": 0.444444444,
+              "weight": -0.115384623,
+              "cover": 0.444444418},
+             {"leaf": true,
+              "observations": ["B"],
+              "direction": "no",
+              "gradient": -0.666666667,
+              "Hessian": 0.444444444,
+              "weight": 0.230769217,
+              "cover": 0.444444418}]},
+          {"leaf": true,
+           "observations": ["C"],
+           "direction": "no",
+           "gradient": 0.333333333,
+           "Hessian": 0.444444444,
+           "weight": -0.115384623,
+           "cover": 0.444444418}]};
+      tree_plot("#multi_tree1", data);
+    </script>
+    <div id="multi_tree2"></div>
+    <script>
+      var data = {
+        "leaf": false,
+        "condition": "f0 < 1.5",
+        "observations": ["A", "B", "C"],
+        "gain": 0.542986393,
+        "cover": 1.33333325,
+        "children": [
+          {"leaf": true,
+           "observations": ["A", "B"],
+           "direction": "yes",
+           "gradient": 0.666666667,
+           "Hessian": 0.888888889,
+           "weight": -0.176470593,
+           "cover": 0.888888836},
+          {"leaf": true,
+           "observations": ["C"],
+           "direction": "no",
+           "gradient": -0.666666667,
+           "Hessian": 0.444444444,
+           "weight": 0.230769217,
+           "cover": 0.444444418}]};
+      tree_plot("#multi_tree2", data);
+    </script>
+    <p>Then the probability for A to be in class 0
+    $$p_{0A} = \frac{\mathrm{e}^{0.230769217}}{\mathrm{e}^{0.230769217} + \mathrm{e}^{-0.115384623} + \mathrm{e}^{-0.176470593}} = 42.1427352\%,$$
+    the probability for B to be in class 2
+    $$p_{2B} = \frac{\mathrm{e}^{-0.176470593}}{\mathrm{e}^{-0.176470593} + \mathrm{e}^{0.230769217} + \mathrm{e}^{-0.176470593}} = 28.5496947\%,$$
+    and so on. The predictions are</p>
+    <div id="multi_round0_pred"></div>
+    <script>
+      var pred = [[{"x": -1, "y": 0.421427352}, {"x": 0.5, "y": 0.421427352}, {"x": 0.5, "y": 0.285496947}, {"x": 1.5, "y": 0.285496947}, {"x": 1.5, "y": 0.280453402}, {"x": 3, "y": 0.280453402}],
+      [{"x": -1, "y": 0.298119246}, {"x": 0.5, "y": 0.298119246}, {"x": 0.5, "y": 0.429006107}, {"x": 1.5, "y": 0.429006107}, {"x": 1.5, "y": 0.298119246}, {"x": 3, "y": 0.298119246}],
+      [{"x": -1, "y": 0.280453402}, {"x": 0.5, "y": 0.280453402}, {"x": 0.5, "y": 0.285496947}, {"x": 1.5, "y": 0.285496947}, {"x": 1.5, "y": 0.421427352}, {"x": 3, "y": 0.421427352}]]
+      pred_plot("#multi_round0_pred", data_multi, pred)
     </script>
   </div>
 </body>
