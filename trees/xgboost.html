@@ -38,13 +38,20 @@
       .call(d3.axisLeft(yScale));
 
       // Training data
-      svg.selectAll(".dot")
+      var data_point = svg.selectAll(".data_point")
       .data(data)
-      .enter().append("circle") // Uses the enter().append() method
-      .attr("class", "dot") // Assign a class for styling
-      .attr("cx", function(d) { return xScale(d.x) })
-      .attr("cy", function(d) { return yScale(d.y) })
-      .attr("r", 5);
+      .enter().append("g")
+      data_point.append("circle")
+      .attr("class", "data_point")
+      .attr("r", 5)
+      .attr("cx", function(d) { return xScale(d.x); })
+      .attr("cy", function(d) { return yScale(d.y); })
+      data_point.append("text")
+      .text(function(d) { return d.ID; })
+      .attr("x", function(d) { return xScale(d.x); })
+      .attr("dx", -5)
+      .attr("y", function(d) { return yScale(d.y); })
+      .attr("dy", -10);
 
       // Prediction
       svg.append("path")
@@ -61,7 +68,7 @@
     // Tree plot
     var tree_plot = function (id, data) {
       var margin = {top: 50, right: 50, bottom: 50, left: 50}
-      , width = 400 - margin.left - margin.right
+      , width = 600 - margin.left - margin.right
       , height = 300 - margin.top - margin.bottom;
 
       var svg = d3.select(id)
@@ -86,10 +93,52 @@
       .attr("cx", function(d) { return d.x; })
       .attr("cy", function(d) { return d.y; });
       node.append("text")
-      .text(function(d){return d.data.name;})
+      .text(function(d) {
+              if (d.data.leaf) {
+                return "w = " + d.data.weight;
+              } else {
+                return d.data.condition;
+              }
+            })
       .attr("x", function(d) { return d.x; })
       .attr("dx", 5)
       .attr("y", function(d) { return d.y; });
+      node.append("text")
+      .text(function(d) {
+              var contents = "";
+              for (i = 0; i < d.data.observations.length; ++i) {
+                contents += d.data.observations[i] + " ";
+              }
+              return contents;
+            })
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; })
+      .attr("dy", 15);
+      node.append("text")
+      .text(function(d) {
+              if (d.data.leaf) {
+                return "g = " + d.data.gradient;
+              } else {
+                return "gain = " + d.data.gain;
+              }
+            })
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; })
+      .attr("dy", 30);
+      node.append("text")
+      .text(function(d) {
+              if (d.data.leaf) {
+                return "h = " + d.data.Hessian;
+              } else {
+                return "cover = " + d.data.cover;
+              }
+            })
+      .attr("x", function(d) { return d.x; })
+      .attr("dx", 5)
+      .attr("y", function(d) { return d.y; })
+      .attr("dy", 45);
 
       // Links
       svg.selectAll(".link")
@@ -209,9 +258,11 @@
     <p>Unless otherwise specified by the parameter <code>base_score</code>, the prediction begins at 0.5.</p>
     <div id="mse_initial_pred"></div>
     <script>
-      var data = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+      var data_mse = [{"ID": "A", "x": 0, "y": 0},
+                      {"ID": "B", "x": 1, "y": 1},
+                      {"ID": "C", "x": 2, "y": 2}]
       var pred = [{"x": -1, "y": 0.5}, {"x": 3, "y": 0.5}]
-      pred_plot("#mse_initial_pred", data, pred)
+      pred_plot("#mse_initial_pred", data_mse, pred)
     </script>
     <h3>Tree 0</h3>
     <p>XGBoost sorts the features and searches for the split with the most gain, where
@@ -280,68 +331,137 @@
     <div id="mse_tree0"></div>
     <script>
       var data = {
-        "name": "f0 < 0.5",
+        "condition": "f0 < 0.5",
+        "leaf": false,
+        "observations": ["A", "B", "C"],
+        "gain": 0.895833373,
+        "cover": 3,          
         "children": [
-          {"name": "A",
-           "type": "yes"},
-          {"name": "BC",
-           "type": "no"}]};
+          {"leaf": true,
+           "name": "A",
+           "direction": "yes",
+           "observations": ["A"],
+           "gradient": 0.5,
+           "Hessian": 1,
+           "weight": -0.125,
+           "cover":1},
+          {"leaf": true,
+           "name": "BC",
+           "direction": "no",
+           "observations": ["B", "C"],
+           "gradient": -2,
+           "Hessian": 2,
+           "weight": 0.333333343,
+           "cover": 2}]};
       tree_plot("#mse_tree0", data);
     </script>
     <p>The gain for splitting B and C is -0.0833. This means a split would make the objective function worse, so the initial tree is complete. To get the prediction, we must add it to the starting prediction of 0.5. So below 0.5, we prediction 0.5 - 0.125 = 0.375 and above it, we predict 0.833.</p>
     <div id="mse_tree0_pred"></div>
     <script>
-      var data = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
       var pred = [{"x": -1, "y": 0.375}, {"x": 0.5, "y": 0.375}, {"x": 0.5, "y": 0.8333333}, {"x": 3, "y": 0.8333333}]
-      pred_plot("#mse_tree0_pred", data, pred)
+      pred_plot("#mse_tree0_pred", data_mse, pred)
     </script>
     <h3>Tree 1</h3>
     <p>The split with the most gain separates A and B from C. The gain is 0.465, while splitting A from B and C is 0.433. The algorithm proceeds by splitting A from B with a gain of 0.0697.</p>
     <div id="mse_tree1"></div>
     <script>
       var data = {
-        "name": "f0 < 1.5",
+        "leaf": false,
+        "condition": "f0 < 1.5",
+        "observations": ["A", "B", "C"],
+        "gain": 0.465422451,
+        "cover": 3,
         "children": [
-          {"name": "f0 < 0.5",
-           "type": "yes",
+          {"leaf": false,
+           "condition": "f0 < 0.5",
+           "direction": "yes",
+           "observations": ["A", "B"],
+           "gradient": 0.208333333,
+           "Hessian": 2,
+           "gain": 0.0697337836,
+           "cover": 2,
            "children": [
-             {"name": "A",
-              "type": "yes"},
-             {"name": "B",
-              "type": "no"}]},
-          {"name": "C",
-           "type": "no"}]};
+             {"leaf": true,
+              "name": "A",
+              "direction": "yes",
+              "observations": ["A"],
+              "gradient": 0.375,
+              "Hessian": 1,
+              "weight": -0.09375,
+              "cover": 1},
+             {"leaf": true,
+              "name": "B",
+              "direction": "no",
+              "observations": ["B"],
+              "gradient": -0.166666667,
+              "Hessian": 1,
+              "weight": 0.0416666567,
+              "cover": 1}]},
+          {"leaf": true,
+           "name": "C",
+           "direction": "no",
+           "observations": ["C"],
+           "gradient": -1.166666667,
+           "Hessian": 1,
+           "weight": 0.291666657,
+           "cover": 1}]};
       tree_plot("#mse_tree1", data);
     </script>
     <div id="mse_tree1_pred"></div>
     <script>
-      var data = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
       var pred = [{"x": -1, "y": 0.28125}, {"x": 0.5, "y": 0.28125}, {"x": 0.5, "y": 0.875}, {"x": 1.5, "y": 0.875}, {"x": 1.5, "y": 1.125}, {"x": 3, "y": 1.125}]
-      pred_plot("#mse_tree1_pred", data, pred)
+      pred_plot("#mse_tree1_pred", data_mse, pred)
     </script>
     <h3>Tree 2</h3>
     <p>The split with the most gain separates A and B from C again. The gain is 0.262, while splitting A from B and C is 0.244. The algorithm proceeds by splitting A from B with a gain of 0.0392.</p>
     <div id="mse_tree2"></div>
     <script>
       var data = {
-        "name": "f0 < 1.5",
+        "leaf": false,
+        "condition": "f0 < 1.5",
+        "observations": ["A", "B"],
+        "gain": 0.26180014,
+        "cover": 3,
         "children": [
-          {"name": "f0 < 0.5",
-           "type": "yes",
+          {"leaf": false,
+           "condition": "f0 < 0.5",
+           "direction": "yes",
+           "observations": ["A", "B"],
+           "gradient": 0.15625,
+           "Hessian": 2,
+           "gain": 0.0392252617,
+           "cover": 2,
            "children": [
-             {"name": "A",
-              "type": "yes"},
-             {"name": "B",
-              "type": "no"}]},
-          {"name": "C",
-           "type": "no"}]};
+             {"leaf": true,
+              "name": "A",
+              "observations": ["A"],
+              "direction": "yes",
+              "gradient": 0.28125,
+              "Hessian": 1,
+              "weight": -0.0703125,
+              "cover": 1},
+             {"leaf": true,
+              "name": "B",
+              "observations": ["B"],
+              "direction": "no",
+              "gradient": -0.125,
+              "Hessian": 1,
+              "weight": 0.03125,
+              "cover": 1}]},
+          {"leaf": true,
+           "name": "C",
+           "observations": ["C"],
+           "direction": "no",
+           "gradient": -0.875,
+           "Hessian": 1,
+           "weight": 0.21875,
+           "cover": 1}]};
       tree_plot("#mse_tree2", data);
     </script>
     <div id="mse_tree2_pred"></div>
     <script>
-      var data = [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
       var pred = [{"x": -1, "y": 0.2109375}, {"x": 0.5, "y": 0.2109375}, {"x": 0.5, "y": 0.90625}, {"x": 1.5, "y": 0.90625}, {"x": 1.5, "y": 1.34375}, {"x": 3, "y": 1.34375}]
-      pred_plot("#mse_tree2_pred", data, pred)
+      pred_plot("#mse_tree2_pred", data_mse, pred)
     </script>
   </div>
 </body>
